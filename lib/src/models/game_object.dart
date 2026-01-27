@@ -7,12 +7,7 @@ class Bird {
   final double x;
   final double size;
 
-  Bird({
-    required this.y,
-    this.velocity = 0.0,
-    this.x = 0.2,
-    this.size = 40.0,
-  });
+  Bird({required this.y, this.velocity = 0.0, this.x = 0.2, this.size = 40.0});
 
   void jump(double jumpForce) {
     velocity = -jumpForce;
@@ -23,12 +18,7 @@ class Bird {
     y += velocity;
   }
 
-  Rect get hitbox => Rect.fromLTWH(
-        x - size / 2,
-        y - size / 2,
-        size,
-        size,
-      );
+  Rect get hitbox => Rect.fromLTWH(x - size / 2, y - size / 2, size, size);
 }
 
 /// Represents a pipe obstacle
@@ -64,18 +54,13 @@ class Pipe {
   }
 
   // Top pipe hitbox
-  Rect get topHitbox => Rect.fromLTWH(
-        x,
-        0,
-        width,
-        gapY,
-      );
+  Rect get topHitbox => Rect.fromLTWH(x, 0, width, gapY);
 
   // Bottom pipe hitbox (from gap end to screen bottom)
   Rect bottomHitbox(double screenHeight) => Rect.fromLTWH(
-        x,
-        gapY + gapHeight,
-        width,
-        screenHeight - (gapY + gapHeight),
-      );
+    x,
+    gapY + gapHeight,
+    width,
+    screenHeight - (gapY + gapHeight),
+  );
 }

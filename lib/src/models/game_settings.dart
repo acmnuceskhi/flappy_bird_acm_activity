@@ -9,8 +9,8 @@ class GameSettings {
   GameSettings({
     this.maxAttempts = 3,
     this.gravity = 0.5,
-    this.pipeSpeed = 1.0,
-    this.pipeSpawnInterval = 2.0,
+    this.pipeSpeed = 2.0,
+    this.pipeSpawnInterval = 4.0,
     this.jumpForce = 8.0,
   });
 
