@@ -7,9 +7,7 @@ import 'src/pages/user_home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -22,7 +20,7 @@ class MyApp extends StatelessWidget {
       title: 'Flappy Bird Booth',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.dark(primary: Colors.blue),
         useMaterial3: true,
       ),
       home: const AppRoot(),
@@ -41,9 +39,7 @@ class AppRoot extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flame/game.dart';
 import '../models/game_settings.dart';
+import '../models/character.dart';
 import '../game/flappy_bird_game.dart';
 
 /// Main Flappy Bird game page
@@ -12,6 +13,7 @@ class FlappyGamePage extends StatefulWidget {
   final String code;
   final GameSettings settings;
   final String userName;
+  final Character selectedCharacter;
 
   const FlappyGamePage({
     super.key,
@@ -19,6 +21,7 @@ class FlappyGamePage extends StatefulWidget {
     required this.code,
     required this.settings,
     required this.userName,
+    required this.selectedCharacter,
   });
 
   @override
@@ -29,6 +32,8 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   late FlappyBirdGame _game;
   late final Stopwatch _stopwatch;
   bool _isSubmitting = false;
+  bool _isResetting = false;  // Debounce flag for play again
+  bool _isGameOver = false;  // Flag to prevent duplicate game over handling
   int _score = 0;
 
   // Local attempt tracking
@@ -40,8 +45,19 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   void initState() {
     super.initState();
     _stopwatch = Stopwatch();
+    
+    // Create modified settings with character-specific physics
+    final characterSettings = GameSettings(
+      maxAttempts: widget.settings.maxAttempts,
+      gravity: widget.settings.gravity,
+      pipeSpeed: widget.selectedCharacter.pipeSpeed,  // Use character's speed
+      pipeSpawnInterval: widget.settings.pipeSpawnInterval,
+      jumpForce: widget.selectedCharacter.jumpForce,  // Use character's jump
+      backgroundUrl: widget.settings.backgroundUrl,
+    );
+    
     _game = FlappyBirdGame(
-      settings: widget.settings,
+      settings: characterSettings,
       onGameOver: _handleGameOver,
       onScoreUpdate: () {
         if (mounted) {
@@ -50,6 +66,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
           });
         }
       },
+      characterSpriteUrl: widget.selectedCharacter.spriteUrl,
     );
   }
 
@@ -59,6 +76,10 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   }
 
   void _handleGameOver(int finalScore) {
+    // Prevent duplicate game over handling
+    if (_isGameOver) return;
+    _isGameOver = true;
+    
     _stopwatch.stop();
     setState(() {
       _score = finalScore;
@@ -72,6 +93,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   void _resetGame() {
     setState(() {
       _score = 0;
+      _isGameOver = false;  // Reset game over flag for next attempt
     });
     _game.reset();
     _stopwatch.reset();
@@ -116,9 +138,12 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
         actions: [
           if (hasMoreAttempts)
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
+              onPressed: _isResetting ? null : () {
+                if (_isResetting) return;
+                setState(() => _isResetting = true);
+                Navigator.pop(context);  // Close dialog
                 _resetGame();
+                setState(() => _isResetting = false);
               },
               child: const Text('Play Again'),
             ),
@@ -142,11 +167,6 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
     });
 
     try {
-      // Track attempt locally
-      _currentAttempt++;
-      _attemptScores.add(_score);
-      _bestScore = _attemptScores.reduce(max);
-
       final hasMoreAttempts = _currentAttempt < widget.settings.maxAttempts;
 
       // Only submit to Firestore after all attempts are used
@@ -164,58 +184,11 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
           'lastPlayedAt': FieldValue.serverTimestamp(),
         });
       }
-
-      if (!mounted) return;
-
-      // Show result dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Game Over!'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Score: $_score',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text('Best Score: $_bestScore'),
-              const SizedBox(height: 8),
-              Text(
-                'Attempts: $_currentAttempt / ${widget.settings.maxAttempts}',
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-          actions: [
-            if (hasMoreAttempts)
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _resetGame();
-                },
-                child: const Text('Play Again'),
-              ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: hasMoreAttempts ? const Text('Exit') : const Text('Done'),
-            ),
-          ],
-        ),
-      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error submitting score: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error submitting score: $e')),
+      );
     } finally {
       setState(() {
         _isSubmitting = false;
@@ -234,6 +207,18 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
         },
         child: Stack(
           children: [
+            // Background image if URL provided
+            if (widget.settings.backgroundUrl.isNotEmpty)
+              Positioned.fill(
+                child: Image.network(
+                  widget.settings.backgroundUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(color: Colors.lightBlue.shade100);
+                  },
+                ),
+              ),
+            
             // Flame game widget
             GameWidget(game: _game),
 
@@ -275,7 +260,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'Attempts: ${_game.isGameStarted ? _currentAttempt : _currentAttempt}/${widget.settings.maxAttempts}',
+                  'Attempts: ${_game.isGameStarted ? _currentAttempt + 1 : _currentAttempt + 1}/${widget.settings.maxAttempts}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -285,8 +270,8 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
               ),
             ),
 
-            // Start instruction
-            if (!_game.isGameStarted)
+            // Start instruction (only show before first tap)
+            if (_currentAttempt == 0 && !_game.isGameStarted)
               const Center(
                 child: Text(
                   'Tap to Start',

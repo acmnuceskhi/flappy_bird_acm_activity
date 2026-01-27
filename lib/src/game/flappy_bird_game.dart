@@ -1,14 +1,18 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import '../models/game_settings.dart';
 
 class FlappyBirdGame extends FlameGame with HasCollisionDetection {
   final GameSettings settings;
   final Function(int score) onGameOver;
   final Function() onScoreUpdate;
+  final String? characterSpriteUrl;
   
   late BirdComponent bird;
   final List<PipeComponent> pipes = [];
@@ -22,16 +26,18 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
     required this.settings,
     required this.onGameOver,
     required this.onScoreUpdate,
+    this.characterSpriteUrl,
   });
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     
-    // Add bird
+    // Add bird with sprite URL
     bird = BirdComponent(
       position: Vector2(size.x * 0.2, size.y / 2),
       settings: settings,
+      spriteUrl: characterSpriteUrl,
     );
     add(bird);
     
@@ -103,6 +109,9 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
     if (!isGameStarted) {
       isGameStarted = true;
       bird.isActive = true;
+      // Spawn the first pipe immediately
+      _spawnPipe();
+      timeSinceLastPipe = 0;
     }
     
     bird.jump();
@@ -129,13 +138,35 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
 
 class BirdComponent extends PositionComponent {
   final GameSettings settings;
+  final String? spriteUrl;
   double velocity = 0;
   bool isActive = false;
+  ui.Image? _spriteImage;  // Use dart:ui Image type explicitly
 
   BirdComponent({
     required super.position,
     required this.settings,
-  }) : super(size: Vector2.all(40));
+    this.spriteUrl,
+  }) : super(size: Vector2.all(60));
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    
+    // Load custom sprite if URL provided
+    if (spriteUrl != null && spriteUrl!.isNotEmpty) {
+      try {
+        final response = await http.get(Uri.parse(spriteUrl!));
+        if (response.statusCode == 200) {
+          final codec = await ui.instantiateImageCodec(response.bodyBytes);
+          final frame = await codec.getNextFrame();
+          _spriteImage = frame.image;
+        }
+      } catch (e) {
+        debugPrint('Failed to load sprite: $e');
+      }
+    }
+  }
 
   void jump() {
     velocity = -settings.jumpForce;
@@ -156,24 +187,36 @@ class BirdComponent extends PositionComponent {
   void render(Canvas canvas) {
     super.render(canvas);
     
-    // Draw bird
-    final paint = Paint()..color = Colors.yellow.shade700;
-    canvas.drawCircle(
-      Offset(size.x / 2, size.y / 2),
-      size.x / 2,
-      paint,
-    );
+    // If custom sprite is loaded, draw it
+    if (_spriteImage != null) {
+      final srcRect = Rect.fromLTWH(
+        0,
+        0,
+        _spriteImage!.width.toDouble(),
+        _spriteImage!.height.toDouble(),
+      );
+      final dstRect = Rect.fromLTWH(0, 0, size.x, size.y);
+      canvas.drawImageRect(_spriteImage!, srcRect, dstRect, Paint());
+    } else {
+      // Default bird rendering (yellow circle)
+      final paint = Paint()..color = Colors.yellow.shade700;
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        size.x / 2,
+        paint,
+      );
 
-    // Bird border
-    final borderPaint = Paint()
-      ..color = Colors.orange.shade900
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    canvas.drawCircle(
-      Offset(size.x / 2, size.y / 2),
-      size.x / 2,
-      borderPaint,
-    );
+      // Bird border
+      final borderPaint = Paint()
+        ..color = Colors.orange.shade900
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3;
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        size.x / 2,
+        borderPaint,
+      );
+    }
   }
 }
 

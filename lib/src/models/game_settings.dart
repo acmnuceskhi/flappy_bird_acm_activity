@@ -5,6 +5,7 @@ class GameSettings {
   final double pipeSpeed;
   final double pipeSpawnInterval;
   final double jumpForce;
+  final String backgroundUrl;  // Firebase Storage URL for background image
 
   GameSettings({
     this.maxAttempts = 3,
@@ -12,6 +13,7 @@ class GameSettings {
     this.pipeSpeed = 2.0,
     this.pipeSpawnInterval = 4.0,
     this.jumpForce = 8.0,
+    this.backgroundUrl = '',
   });
 
   factory GameSettings.fromFirestore(Map<String, dynamic>? data) {
@@ -24,6 +26,7 @@ class GameSettings {
       pipeSpeed: (data['pipeSpeed'] as num?)?.toDouble() ?? 3.0,
       pipeSpawnInterval: (data['pipeSpawnInterval'] as num?)?.toDouble() ?? 2.0,
       jumpForce: (data['jumpForce'] as num?)?.toDouble() ?? 8.0,
+      backgroundUrl: data['backgroundUrl'] as String? ?? '',
     );
   }
 
@@ -34,6 +37,7 @@ class GameSettings {
       'pipeSpeed': pipeSpeed,
       'pipeSpawnInterval': pipeSpawnInterval,
       'jumpForce': jumpForce,
+      'backgroundUrl': backgroundUrl,
     };
   }
 }

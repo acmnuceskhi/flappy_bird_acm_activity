@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'flappy_game_page.dart';
+import 'character_selection_page.dart';
 import '../models/game_settings.dart';
 
 /// Code entry page - user enters their registration code
@@ -115,12 +115,12 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
         return;
       }
 
-      // Navigate to game
+      // Navigate to character selection
       if (!mounted) return;
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => FlappyGamePage(
+          builder: (context) => CharacterSelectionPage(
             gameId: gameId,
             code: code,
             settings: settings,
