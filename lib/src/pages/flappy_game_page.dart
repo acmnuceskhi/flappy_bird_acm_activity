@@ -10,14 +10,14 @@ class FlappyGamePage extends StatefulWidget {
   final String gameId;
   final String code;
   final GameSettings settings;
-  final int attemptsUsed;
+  final String userName;
 
   const FlappyGamePage({
     super.key,
     required this.gameId,
     required this.code,
     required this.settings,
-    required this.attemptsUsed,
+    required this.userName,
   });
 
   @override
@@ -35,12 +35,20 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   final Random _random = Random();
   late final Stopwatch _stopwatch;
   bool _isSubmitting = false;
+  
+  // Local attempt tracking
+  int _currentAttempt = 0;
+  int _bestScore = 0;
+  final List<int> _attemptScores = [];
 
   @override
   void initState() {
     super.initState();
     _stopwatch = Stopwatch();
-    _resetGame();
+    // Delay reset to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resetGame();
+    });
   }
 
   @override
@@ -51,8 +59,9 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   }
 
   void _resetGame() {
+    final screenHeight = MediaQuery.of(context).size.height;
     setState(() {
-      _bird = Bird(y: 0.0);
+      _bird = Bird(y: screenHeight / 2);
       _pipes.clear();
       _score = 0;
       _isGameStarted = false;
@@ -71,11 +80,17 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
 
     _stopwatch.start();
 
-    // Game loop - runs at ~60 FPS
+    // Game loop - runs at 60 FPS with frame limiting
+    int lastFrameTime = DateTime.now().millisecondsSinceEpoch;
     _gameTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
-      if (!_isGameOver) {
-        _updateGame();
-      }
+      if (_isGameOver) return;
+      
+      // Frame limiting to prevent lag
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now - lastFrameTime < 16) return;
+      lastFrameTime = now;
+      
+      _updateGame();
     });
 
     // Spawn pipes periodically
@@ -100,11 +115,13 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
       // Move pipes
       for (int i = 0; i < _pipes.length; i++) {
         final pipe = _pipes[i];
-        final newX = pipe.x - widget.settings.pipeSpeed * 0.01;
+        final newX = pipe.x - widget.settings.pipeSpeed * 0.005;
         _pipes[i] = pipe.copyWith(x: newX);
 
-        // Check if bird passed pipe
-        if (!pipe.passed && newX + pipe.width < _bird.x) {
+        // Check if bird passed pipe (using normalized coordinates)
+        // Bird is at x = 0.2, pipe width is 80px normalized to ~0.05
+        final pipeEndX = newX + 0.05;
+        if (!pipe.passed && pipeEndX < _bird.x) {
           _pipes[i] = pipe.copyWith(passed: true);
           _score++;
         }
@@ -180,9 +197,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
       _startGame();
     }
 
-    setState(() {
-      _bird.jump();
-    });
+    _bird.jump(widget.settings.jumpForce);
   }
 
   Future<void> _submitScore() async {
@@ -193,36 +208,28 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
     });
 
     try {
-      final firestore = FirebaseFirestore.instance;
-      final responseRef = firestore
-          .collection('games')
-          .doc(widget.gameId)
-          .collection('responses')
-          .doc(widget.code);
+      // Track attempt locally
+      _currentAttempt++;
+      _attemptScores.add(_score);
+      _bestScore = _attemptScores.reduce(max);
 
-      final responseDoc = await responseRef.get();
-      final responseData = responseDoc.data() ?? {};
+      final hasMoreAttempts = _currentAttempt < widget.settings.maxAttempts;
 
-      final attempts = List<Map<String, dynamic>>.from(
-        responseData['attempts'] as List<dynamic>? ?? [],
-      );
+      // Only submit to Firestore after all attempts are used
+      if (!hasMoreAttempts) {
+        final firestore = FirebaseFirestore.instance;
+        final responseRef = firestore
+            .collection('games')
+            .doc(widget.gameId)
+            .collection('responses')
+            .doc(widget.code);
 
-      // Add current attempt
-      attempts.add({
-        'score': _score,
-        'timeTakenSeconds': _stopwatch.elapsed.inSeconds,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      // Calculate best score
-      final bestScore = attempts.map((a) => a['score'] as int).reduce(max);
-
-      // Update Firestore
-      await responseRef.update({
-        'attempts': attempts,
-        'bestScore': bestScore,
-        'lastPlayedAt': FieldValue.serverTimestamp(),
-      });
+        await responseRef.update({
+          'score': _bestScore,
+          'timeTakenSeconds': _stopwatch.elapsed.inSeconds,
+          'lastPlayedAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       if (!mounted) return;
 
@@ -240,18 +247,16 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text('Time: ${_stopwatch.elapsed.inSeconds}s'),
-              const SizedBox(height: 8),
-              Text('Best Score: $bestScore'),
+              Text('Best Score: $_bestScore'),
               const SizedBox(height: 8),
               Text(
-                'Attempts: ${attempts.length} / ${widget.settings.maxAttempts}',
+                'Attempts: $_currentAttempt / ${widget.settings.maxAttempts}',
                 style: const TextStyle(color: Colors.grey),
               ),
             ],
           ),
           actions: [
-            if (attempts.length < widget.settings.maxAttempts)
+            if (hasMoreAttempts)
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
@@ -264,7 +269,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                 Navigator.pop(context);
                 Navigator.pop(context);
               },
-              child: const Text('Exit'),
+              child: hasMoreAttempts ? const Text('Exit') : const Text('Done'),
             ),
           ],
         ),
@@ -338,7 +343,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'Attempts: ${widget.attemptsUsed + (_isGameStarted ? 1 : 0)}/${widget.settings.maxAttempts}',
+                  'Attempts: ${_isGameStarted ? _currentAttempt + 1 : _currentAttempt}/${widget.settings.maxAttempts}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -368,9 +373,41 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                 ),
               ),
 
+            // User name display
+            Positioned(
+              top: 50,
+              left: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.userName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             // Back button
             Positioned(
-              top: 40,
+              top: 100,
               left: 10,
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),

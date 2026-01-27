@@ -59,8 +59,11 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
       final gameId = gameDoc.id;
 
       // Check if code exists in responses
-      final responseRef =
-          firestore.collection('games').doc(gameId).collection('responses').doc(code);
+      final responseRef = firestore
+          .collection('games')
+          .doc(gameId)
+          .collection('responses')
+          .doc(code);
       final responseDoc = await responseRef.get();
 
       if (!responseDoc.exists) {
@@ -73,9 +76,10 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
 
       final responseData = responseDoc.data() as Map<String, dynamic>;
 
-      // Check if user has already used all attempts
-      final attempts = responseData['attempts'] as List<dynamic>? ?? [];
-      
+      // Check if user has already played (score field exists and is not null)
+      final score = responseData['score'];
+      final hasPlayed = score != null;
+
       // Load game settings
       final settingsDoc = await firestore
           .collection('games')
@@ -83,19 +87,20 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
           .collection('settings')
           .doc('flappybird')
           .get();
-      
+
       final settings = GameSettings.fromFirestore(settingsDoc.data());
 
-      if (attempts.length >= settings.maxAttempts) {
+      if (hasPlayed) {
         if (!mounted) return;
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('All Attempts Used'),
+            title: const Text('Already Played'),
             content: Text(
-              'You have used all ${settings.maxAttempts} attempts.\n\n'
-              'Best score: ${responseData['bestScore'] ?? 0}',
+              'You have already completed this game.\n\n'
+              'Your score: ${responseData['score'] ?? 0}',
             ),
+            // ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -119,7 +124,7 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
             gameId: gameId,
             code: code,
             settings: settings,
-            attemptsUsed: attempts.length,
+            userName: responseData['userName'] as String? ?? 'Player',
           ),
         ),
       );
@@ -148,27 +153,17 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.gamepad,
-                size: 100,
-                color: Colors.blue,
-              ),
+              const Icon(Icons.gamepad, size: 100, color: Colors.blue),
               const SizedBox(height: 24),
               const Text(
                 'Flappy Bird Challenge',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               const Text(
                 'Enter your registration code to play',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
@@ -214,12 +209,17 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Text(
                         'Start Game',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ],

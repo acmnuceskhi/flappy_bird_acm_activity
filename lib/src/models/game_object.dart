@@ -14,13 +14,13 @@ class Bird {
     this.size = 40.0,
   });
 
-  void jump() {
-    velocity = -8.0;
+  void jump(double jumpForce) {
+    velocity = -jumpForce;
   }
 
   void update(double gravity) {
-    velocity += gravity;
-    y += velocity * 0.02;
+    velocity += gravity * 0.5;
+    y += velocity;
   }
 
   Rect get hitbox => Rect.fromLTWH(
