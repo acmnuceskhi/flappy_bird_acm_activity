@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'code_entry_page.dart';
+import 'game_mode_selection_page.dart';
 import 'admin_password_gate.dart';
 import '../models/game_settings.dart';
 
@@ -42,17 +42,15 @@ class UserHome extends StatelessWidget {
       if (!context.mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => AdminPasswordGate(
-            gameId: gameId,
-            settings: settings,
-          ),
+          builder: (context) =>
+              AdminPasswordGate(gameId: gameId, settings: settings),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -76,7 +74,7 @@ class UserHome extends StatelessWidget {
           ),
         ],
       ),
-      body: const CodeEntryPage(),
+      body: const GameModeSelectionPage(),
     );
   }
 }

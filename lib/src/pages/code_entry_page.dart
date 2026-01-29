@@ -5,7 +5,9 @@ import '../models/game_settings.dart';
 
 /// Code entry page - user enters their registration code
 class CodeEntryPage extends StatefulWidget {
-  const CodeEntryPage({super.key});
+  final bool isCompetitiveMode;
+
+  const CodeEntryPage({super.key, this.isCompetitiveMode = true});
 
   @override
   State<CodeEntryPage> createState() => _CodeEntryPageState();
@@ -144,88 +146,107 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
 
   @override
   Widget build(BuildContext context) {
+    // If competitive mode, use Scaffold with back button
+    if (widget.isCompetitiveMode) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Enter Competition Code'),
+          backgroundColor: Colors.blue,
+        ),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: _buildCodeEntryForm(context),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Otherwise, just center the form (for home page)
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.gamepad, size: 100, color: Colors.blue),
-              const SizedBox(height: 24),
-              const Text(
-                'Flappy Bird Challenge',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Enter your registration code to play',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              TextField(
-                controller: _codeController,
-                decoration: const InputDecoration(
-                  labelText: 'Registration Code',
-                  hintText: 'Enter code',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.vpn_key),
-                ),
-                textCapitalization: TextCapitalization.characters,
-                enabled: !_isLoading,
-                onSubmitted: (_) => _validateAndStart(),
-              ),
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(color: Colors.red.shade900),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _validateAndStart,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Text(
-                        'Start Game',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
-            ],
-          ),
+          child: _buildCodeEntryForm(context),
         ),
       ),
+    );
+  }
+
+  Widget _buildCodeEntryForm(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Icon(Icons.gamepad, size: 100, color: Colors.blue),
+        const SizedBox(height: 24),
+        const Text(
+          'Flappy Bird Challenge',
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Enter your registration code to play',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 48),
+        TextField(
+          controller: _codeController,
+          decoration: const InputDecoration(
+            labelText: 'Registration Code',
+            hintText: 'Enter code',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.vpn_key),
+          ),
+          textCapitalization: TextCapitalization.characters,
+          enabled: !_isLoading,
+          onSubmitted: (_) => _validateAndStart(),
+        ),
+        if (_errorMessage != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Text(
+              _errorMessage!,
+              style: TextStyle(color: Colors.red.shade900),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _validateAndStart,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Text(
+                  'Start Game',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+        ),
+      ],
     );
   }
 }
