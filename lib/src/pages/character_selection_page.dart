@@ -70,24 +70,34 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Select Your Character'),
-        backgroundColor: Colors.blue,
+        title: Text(
+          'Select Your Character',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: Colors.redAccent.shade200,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
       ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade400, Colors.blue.shade50],
+            colors: [Colors.black, Colors.red.shade900],
           ),
         ),
         child: FutureBuilder<List<Character>>(
           future: _loadCharacters(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.redAccent),
+              );
             }
 
             if (snapshot.hasError) {
@@ -95,12 +105,20 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error, color: Colors.red, size: 48),
+                    Icon(
+                      Icons.error,
+                      color: Colors.redAccent.shade200,
+                      size: 48,
+                    ),
                     const SizedBox(height: 16),
                     Text('Error: ${snapshot.error}'),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent.shade200,
+                        foregroundColor: Colors.black,
+                      ),
                       child: const Text('Go Back'),
                     ),
                   ],
@@ -109,8 +127,6 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
             }
 
             final characters = snapshot.data ?? [Character.defaultBird];
-
-            // Filter characters based on search query
             final filteredCharacters = characters
                 .where(
                   (character) => character.name.toLowerCase().contains(
@@ -123,8 +139,8 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 children: [
-                  const SizedBox(height: 16),
-                  // Search Box
+                  const SizedBox(height: 40),
+                  // Search Box (dark themed)
                   TextField(
                     controller: _searchController,
                     onSubmitted: (value) {
@@ -134,16 +150,34 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
                     },
                     decoration: InputDecoration(
                       hintText: 'Search characters...',
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.redAccent.shade200,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear, color: Colors.grey[400]),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
                       filled: true,
+                      fillColor: Colors.grey[850],
+                      hintStyle: TextStyle(color: Colors.grey[500]),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
                     ),
+                    style: TextStyle(color: Colors.grey[100]),
                   ),
                   const SizedBox(height: 24),
                   Container(
@@ -152,13 +186,13 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
                       vertical: 16,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.grey[900],
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
@@ -169,15 +203,15 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade700,
+                                color: Colors.grey[100],
                               ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'You\'ll play 3 attempts with this character',
+                          'Pick a bird and try to beat your best!',
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: Colors.grey[600]),
+                              ?.copyWith(color: Colors.grey[400]),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -200,7 +234,7 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
                             Text(
                               'No characters found',
                               style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(color: Colors.grey[600]),
+                                  ?.copyWith(color: Colors.grey[400]),
                             ),
                           ],
                         ),
@@ -287,17 +321,18 @@ class _CharacterCard extends StatelessWidget {
     final jumpPercent = (character.jumpForce / 15.0).clamp(0.0, 1.0);
 
     return Card(
+      color: Colors.grey[850],
       elevation: 8,
-      shadowColor: Colors.blue.withValues(alpha: 0.3),
+      shadowColor: Colors.black54,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.blue.shade100, width: 2),
+        side: BorderSide(color: Colors.red.shade800.withOpacity(0.6), width: 1),
       ),
       child: InkWell(
         onTap: onSelect,
         borderRadius: BorderRadius.circular(16),
-        splashColor: Colors.blue.withValues(alpha: 0.3),
-        highlightColor: Colors.blue.withValues(alpha: 0.1),
+        splashColor: Colors.redAccent.withOpacity(0.12),
+        highlightColor: Colors.redAccent.withOpacity(0.06),
         child: Padding(
           padding: const EdgeInsets.all(14.0),
           child: Column(
@@ -314,11 +349,11 @@ class _CharacterCard extends StatelessWidget {
                           width: 70,
                           height: 70,
                           decoration: BoxDecoration(
-                            color: Colors.amber.shade400,
+                            color: Colors.redAccent.shade200,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.amber.withValues(alpha: 0.4),
+                                color: Colors.redAccent.withOpacity(0.25),
                                 blurRadius: 8,
                                 spreadRadius: 2,
                               ),
@@ -327,7 +362,7 @@ class _CharacterCard extends StatelessWidget {
                           child: const Icon(
                             Icons.flutter_dash,
                             size: 45,
-                            color: Colors.white,
+                            color: Colors.black,
                           ),
                         )
                       : Container(
@@ -335,7 +370,7 @@ class _CharacterCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
+                                color: Colors.black.withOpacity(0.4),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -353,13 +388,13 @@ class _CharacterCard extends StatelessWidget {
                                   width: 70,
                                   height: 70,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey[300],
+                                    color: Colors.grey[700],
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.image_not_supported,
                                     size: 35,
-                                    color: Colors.grey,
+                                    color: Colors.grey[400],
                                   ),
                                 );
                               },
@@ -373,7 +408,7 @@ class _CharacterCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: Colors.grey[800],
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -381,7 +416,7 @@ class _CharacterCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade900,
+                    color: Colors.grey[100],
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -397,14 +432,18 @@ class _CharacterCard extends StatelessWidget {
                   // Speed stat
                   Row(
                     children: [
-                      Icon(Icons.speed, size: 16, color: Colors.blue.shade700),
+                      Icon(
+                        Icons.speed,
+                        size: 16,
+                        color: Colors.redAccent.shade200,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Speed',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
+                          color: Colors.grey[300],
                         ),
                       ),
                     ],
@@ -415,9 +454,9 @@ class _CharacterCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: speedPercent,
                       minHeight: 6,
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: Colors.grey[800],
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.blue.shade600,
+                        Colors.redAccent.shade200,
                       ),
                     ),
                   ),
@@ -429,7 +468,7 @@ class _CharacterCard extends StatelessWidget {
                       Icon(
                         Icons.arrow_upward,
                         size: 16,
-                        color: Colors.green.shade700,
+                        color: Colors.red.shade300,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -437,7 +476,7 @@ class _CharacterCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
+                          color: Colors.grey[300],
                         ),
                       ),
                     ],
@@ -448,9 +487,9 @@ class _CharacterCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: jumpPercent,
                       minHeight: 6,
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: Colors.grey[800],
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.green.shade600,
+                        Colors.red.shade300,
                       ),
                     ),
                   ),

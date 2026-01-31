@@ -230,278 +230,393 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
     );
   }
 
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+      SnackBar(content: Text(message), backgroundColor: Colors.green.shade600),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      //extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Admin Panel'),
-        backgroundColor: Colors.blue,
+        title: Text(
+          'Admin Panel',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: Colors.redAccent.shade200,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Background Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Game Background',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black, Colors.red.shade900],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Background Section
+              Card(
+                color: Colors.grey[900],
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Game Background',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[100],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_backgroundUrlCtrl.text.isNotEmpty)
-                      Column(
-                        children: [
-                          const Text('Current Background:'),
-                          const SizedBox(height: 8),
-                          Image.network(
-                            _backgroundUrlCtrl.text,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
+                      const SizedBox(height: 16),
+                      if (_backgroundUrlCtrl.text.isNotEmpty)
+                        Column(
+                          children: [
+                            Text(
+                              'Current Background:',
+                              style: TextStyle(color: Colors.grey[300]),
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                _backgroundUrlCtrl.text,
                                 height: 150,
-                                color: Colors.grey[300],
-                                child: const Center(
-                                  child: Text('Failed to load image'),
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 150,
+                                    color: Colors.grey[800],
+                                    child: Center(
+                                      child: Text(
+                                        'Failed to load image',
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedBackground == null
+                                  ? 'No file selected'
+                                  : _selectedBackground!.name,
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _uploading ? null : _pickBackground,
+                            icon: Icon(Icons.folder_open, color: Colors.black),
+                            label: Text('Choose File'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent.shade200,
+                              foregroundColor: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _uploading ? null : _uploadBackground,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent.shade200,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: _uploading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.black,
+                                )
+                              : const Text('Upload Background'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Add Character Section
+              Card(
+                color: Colors.grey[900],
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Add New Character',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[100],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _characterNameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Character Name',
+                          filled: true,
+                          fillColor: Colors.grey[850],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.red.shade800),
+                          ),
+                          labelStyle: TextStyle(color: Colors.grey[300]),
+                        ),
+                        style: TextStyle(color: Colors.grey[100]),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _pipeSpeedCtrl,
+                              decoration: InputDecoration(
+                                labelText: 'Pipe Speed',
+                                filled: true,
+                                fillColor: Colors.grey[850],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.red.shade800,
+                                  ),
+                                ),
+                                labelStyle: TextStyle(color: Colors.grey[300]),
+                              ),
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(color: Colors.grey[100]),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextField(
+                              controller: _jumpForceCtrl,
+                              decoration: InputDecoration(
+                                labelText: 'Jump Force',
+                                filled: true,
+                                fillColor: Colors.grey[850],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.red.shade800,
+                                  ),
+                                ),
+                                labelStyle: TextStyle(color: Colors.grey[300]),
+                              ),
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(color: Colors.grey[100]),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedCharacterSprite == null
+                                  ? 'No sprite selected'
+                                  : _selectedCharacterSprite!.name,
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _uploading ? null : _pickCharacterSprite,
+                            icon: Icon(Icons.image, color: Colors.black),
+                            label: Text('Choose Sprite'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent.shade200,
+                              foregroundColor: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _uploading ? null : _addCharacter,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent.shade200,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: _uploading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.black,
+                                )
+                              : const Text('Add Character'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Characters List
+              Text(
+                'Existing Characters',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[100],
+                ),
+              ),
+              const SizedBox(height: 16),
+              FutureBuilder<List<Character>>(
+                future: _loadCharacters(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.redAccent),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  }
+
+                  final characters = snapshot.data ?? [];
+
+                  if (characters.isEmpty) {
+                    return Card(
+                      color: Colors.grey[900],
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Center(
+                          child: Text(
+                            'No characters added yet',
+                            style: TextStyle(color: Colors.grey[400]),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: characters.map((character) {
+                      return Card(
+                        color: Colors.grey[900],
+                        margin: const EdgeInsets.only(bottom: 8.0),
+                        child: ListTile(
+                          leading: character.spriteUrl.isEmpty
+                              ? Icon(
+                                  Icons.flutter_dash,
+                                  size: 40,
+                                  color: Colors.grey[300],
+                                )
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.network(
+                                    character.spriteUrl,
+                                    width: 40,
+                                    height: 40,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.broken_image,
+                                        size: 40,
+                                        color: Colors.grey[400],
+                                      );
+                                    },
+                                  ),
+                                ),
+                          title: Text(
+                            character.name,
+                            style: TextStyle(color: Colors.grey[100]),
+                          ),
+                          subtitle: Text(
+                            'Speed: ${character.pipeSpeed} | Jump: ${character.jumpForce}',
+                            style: TextStyle(color: Colors.grey[400]),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(
+                              Icons.delete,
+                              color: Colors.red.shade400,
+                            ),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: Colors.grey[900],
+                                  title: Text(
+                                    'Delete Character?',
+                                    style: TextStyle(
+                                      color: Colors.redAccent.shade200,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  content: Text(
+                                    'Are you sure you want to delete ${character.name}?',
+                                    style: TextStyle(color: Colors.grey[300]),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.grey[300],
+                                      ),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _deleteCharacter(character.id);
+                                      },
+                                      style: TextButton.styleFrom(
+                                        foregroundColor:
+                                            Colors.redAccent.shade200,
+                                      ),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
                           ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _selectedBackground == null
-                                ? 'No file selected'
-                                : _selectedBackground!.name,
-                            style: const TextStyle(fontStyle: FontStyle.italic),
-                          ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: _uploading ? null : _pickBackground,
-                          icon: const Icon(Icons.folder_open),
-                          label: const Text('Choose File'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _uploading ? null : _uploadBackground,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
-                        child: _uploading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text('Upload Background'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Add Character Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Add New Character',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _characterNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Character Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _pipeSpeedCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Pipe Speed',
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextField(
-                            controller: _jumpForceCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Jump Force',
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _selectedCharacterSprite == null
-                                ? 'No sprite selected'
-                                : _selectedCharacterSprite!.name,
-                            style: const TextStyle(fontStyle: FontStyle.italic),
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: _uploading ? null : _pickCharacterSprite,
-                          icon: const Icon(Icons.image),
-                          label: const Text('Choose Sprite'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _uploading ? null : _addCharacter,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                        ),
-                        child: _uploading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text('Add Character'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Characters List
-            const Text(
-              'Existing Characters',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            FutureBuilder<List<Character>>(
-              future: _loadCharacters(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Text('Error: ${snapshot.error}');
-                }
-
-                final characters = snapshot.data ?? [];
-
-                if (characters.isEmpty) {
-                  return const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(24.0),
-                      child: Center(child: Text('No characters added yet')),
-                    ),
+                      );
+                    }).toList(),
                   );
-                }
-
-                return Column(
-                  children: characters.map((character) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8.0),
-                      child: ListTile(
-                        leading: character.spriteUrl.isEmpty
-                            ? const Icon(Icons.flutter_dash, size: 40)
-                            : Image.network(
-                                character.spriteUrl,
-                                width: 40,
-                                height: 40,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.broken_image,
-                                    size: 40,
-                                  );
-                                },
-                              ),
-                        title: Text(character.name),
-                        subtitle: Text(
-                          'Speed: ${character.pipeSpeed} | Jump: ${character.jumpForce}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Delete Character?'),
-                                content: Text(
-                                  'Are you sure you want to delete ${character.name}?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      _deleteCharacter(character.id);
-                                    },
-                                    child: const Text(
-                                      'Delete',
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

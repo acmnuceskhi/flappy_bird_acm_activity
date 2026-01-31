@@ -210,7 +210,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.lightBlue.shade100,
+      backgroundColor: Colors.black,
       body: KeyboardListener(
         focusNode: _focusNode,
         onKeyEvent: (KeyEvent event) {
@@ -250,14 +250,14 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                 child: Center(
                   child: Text(
                     '$_score',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
+                      color: Colors.redAccent.shade200,
+                      shadows: const [
                         Shadow(
                           blurRadius: 10.0,
-                          color: Colors.black,
+                          color: Colors.black54,
                           offset: Offset(2, 2),
                         ),
                       ],
@@ -281,8 +281,8 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                   ),
                   child: Text(
                     'Attempts: ${_game.isGameStarted ? _currentAttempt + 1 : _currentAttempt + 1}/${widget.settings.maxAttempts}',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Colors.grey[200],
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -292,17 +292,17 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
 
               // Start instruction (only show before first tap)
               if (_currentAttempt == 0 && !_game.isGameStarted)
-                const Center(
+                Center(
                   child: Text(
                     'Tap to Start',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
+                      color: Colors.grey[100],
+                      shadows: const [
                         Shadow(
                           blurRadius: 10.0,
-                          color: Colors.black,
+                          color: Colors.black54,
                           offset: Offset(2, 2),
                         ),
                       ],
@@ -326,12 +326,16 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.person, color: Colors.white, size: 18),
+                      Icon(
+                        Icons.person,
+                        color: Colors.redAccent.shade200,
+                        size: 18,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         widget.userName,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Colors.grey[100],
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -346,9 +350,9 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                 top: 100,
                 left: 10,
                 child: IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_back,
-                    color: Colors.white,
+                    color: Colors.redAccent.shade200,
                     size: 32,
                   ),
                   onPressed: () {
@@ -356,13 +360,27 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Exit Game?'),
-                          content: const Text(
+                          backgroundColor: Colors.grey[900],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          title: Text(
+                            'Exit Game?',
+                            style: TextStyle(
+                              color: Colors.redAccent.shade200,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: Text(
                             'Your current game will not be saved.',
+                            style: TextStyle(color: Colors.grey[300]),
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey[300],
+                              ),
                               child: const Text('Cancel'),
                             ),
                             TextButton(
@@ -370,6 +388,9 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                                 Navigator.pop(context);
                                 Navigator.pop(context);
                               },
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.redAccent.shade200,
+                              ),
                               child: const Text('Exit'),
                             ),
                           ],

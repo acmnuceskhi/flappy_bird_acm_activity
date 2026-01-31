@@ -57,8 +57,18 @@ class UserHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Flappy Bird Booth'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          'Flappy Bird Booth',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: Colors.redAccent.shade200,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -74,7 +84,16 @@ class UserHome extends StatelessWidget {
           ),
         ],
       ),
-      body: const GameModeSelectionPage(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black, Colors.red.shade900],
+          ),
+        ),
+        child: const GameModeSelectionPage(),
+      ),
     );
   }
 }
