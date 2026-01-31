@@ -37,24 +37,17 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   bool _isGameOver = false; // Flag to prevent duplicate game over handling
   int _score = 0;
 
-  // Attempt tracking
+  // Attempt tracking (local session only)
   int _currentAttempt = 0;
   int _bestScore = 0;
   final List<int> _attemptScores = [];
-  late String _sessionId; // Unique session ID for tracking attempts
   late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _stopwatch = Stopwatch();
-    _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
     _focusNode = FocusNode();
-
-    // Load existing attempts from Firebase if in competitive mode
-    if (widget.code != null) {
-      _loadExistingAttempts();
-    }
 
     // Request focus after first frame so keyboard events are received
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -83,33 +76,6 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
       },
       characterSpriteUrl: widget.selectedCharacter.spriteUrl,
     );
-  }
-
-  Future<void> _loadExistingAttempts() async {
-    try {
-      final firestore = FirebaseFirestore.instance;
-      final attemptsSnapshot = await firestore
-          .collection('games')
-          .doc(widget.gameId)
-          .collection('responses')
-          .doc(widget.code)
-          .collection('attempts')
-          .orderBy('attemptNumber')
-          .get();
-
-      if (attemptsSnapshot.docs.isNotEmpty) {
-        _currentAttempt = attemptsSnapshot.docs.length;
-        for (final doc in attemptsSnapshot.docs) {
-          final score = doc.data()['score'] as int? ?? 0;
-          _attemptScores.add(score);
-        }
-        if (_attemptScores.isNotEmpty) {
-          _bestScore = _attemptScores.reduce(max);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error loading attempts: $e');
-    }
   }
 
   @override
@@ -214,41 +180,20 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
     try {
       final hasMoreAttempts = _currentAttempt < widget.settings.maxAttempts;
 
-      // Save individual attempt to Firebase (only in competitive mode)
-      if (widget.code != null) {
+      // Save final score to Firebase only when all attempts are done (competitive mode only)
+      if (!hasMoreAttempts && widget.code != null) {
         final firestore = FirebaseFirestore.instance;
-
-        // Save the individual attempt
-        await firestore
+        final responseRef = firestore
             .collection('games')
             .doc(widget.gameId)
             .collection('responses')
-            .doc(widget.code)
-            .collection('attempts')
-            .doc('attempt_${_currentAttempt}')
-            .set({
-              'attemptNumber': _currentAttempt,
-              'score': _score,
-              'timeTakenSeconds': _stopwatch.elapsed.inSeconds,
-              'completedAt': FieldValue.serverTimestamp(),
-              'characterName': widget.selectedCharacter.name,
-              'sessionId': _sessionId,
-            });
+            .doc(widget.code);
 
-        // If all attempts are done, calculate and save final score
-        if (!hasMoreAttempts) {
-          await firestore
-              .collection('games')
-              .doc(widget.gameId)
-              .collection('responses')
-              .doc(widget.code)
-              .update({
-                'score': _bestScore,
-                'timeTakenSeconds': _stopwatch.elapsed.inSeconds,
-                'lastPlayedAt': FieldValue.serverTimestamp(),
-                'totalAttempts': _currentAttempt,
-              });
-        }
+        await responseRef.update({
+          'score': _bestScore,
+          'timeTakenSeconds': _stopwatch.elapsed.inSeconds,
+          'lastPlayedAt': FieldValue.serverTimestamp(),
+        });
       }
     } catch (e) {
       if (!mounted) return;
