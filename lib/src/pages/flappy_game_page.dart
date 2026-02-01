@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flame/game.dart';
+import 'package:just_audio/just_audio.dart';
 import '../models/game_settings.dart';
 import '../models/character.dart';
 import '../game/flappy_bird_game.dart';
@@ -42,12 +43,17 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   int _bestScore = 0;
   final List<int> _attemptScores = [];
   late FocusNode _focusNode;
+  late AudioPlayer _audioPlayer;
 
   @override
   void initState() {
     super.initState();
     _stopwatch = Stopwatch();
     _focusNode = FocusNode();
+    _audioPlayer = AudioPlayer();
+
+    // Pre-load the game over sound to eliminate delay on first play
+    _preLoadGameOverSound();
 
     // Request focus after first frame so keyboard events are received
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -81,6 +87,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   @override
   void dispose() {
     _focusNode.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -94,9 +101,32 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
       _score = finalScore;
     });
 
+    // Play game over sound
+    _playGameOverSound();
+
     // Show dialog immediately, submit score in background
     _showGameOverDialog();
     _submitScoreInBackground();
+  }
+
+  Future<void> _preLoadGameOverSound() async {
+    try {
+      await _audioPlayer.setUrl(widget.selectedCharacter.gameOverSoundUrl);
+      debugPrint('Game over sound pre-loaded successfully');
+    } catch (e) {
+      debugPrint('Error pre-loading game over sound: $e');
+    }
+  }
+
+  Future<void> _playGameOverSound() async {
+    try {
+      // Stop, seek to beginning, and play (file is already loaded)
+      await _audioPlayer.stop();
+      await _audioPlayer.seek(Duration.zero);
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('Error playing game over sound: $e');
+    }
   }
 
   void _resetGame() {
@@ -108,7 +138,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
     _stopwatch.reset();
   }
 
-  void _startGame() {
+  void _startGame() async {
     if (!_game.isGameStarted) {
       _stopwatch.start();
     }

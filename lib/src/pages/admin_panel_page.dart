@@ -31,6 +31,7 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
   bool _uploading = false;
   PlatformFile? _selectedCharacterSprite;
   PlatformFile? _selectedBackground;
+  PlatformFile? _selectedGameOverSound;
 
   @override
   void initState() {
@@ -99,6 +100,24 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
     }
   }
 
+  Future<void> _pickGameOverSound() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        withData: true,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _selectedGameOverSound = result.files.first;
+        });
+      }
+    } catch (e) {
+      _showError('Error picking file: $e');
+    }
+  }
+
   Future<String> _uploadFile(PlatformFile file, String path) async {
     try {
       final storageRef = FirebaseStorage.instance.ref().child(path);
@@ -141,6 +160,19 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
         'flappy_bird/characters/${DateTime.now().millisecondsSinceEpoch}_${_selectedCharacterSprite!.name}',
       );
 
+      // Upload game over sound if provided, otherwise use default storage path
+      String gameOverSoundUrl = "";
+      if (_selectedGameOverSound != null) {
+        gameOverSoundUrl = await _uploadFile(
+          _selectedGameOverSound!,
+          'flappy_bird/sounds/${DateTime.now().millisecondsSinceEpoch}_${_selectedGameOverSound!.name}',
+        );
+      } else {
+        gameOverSoundUrl = await FirebaseStorage.instance.ref().child(
+          'flappy_bird/Fahhh - QuickSounds.com.mp3',
+        ).getDownloadURL();
+      }
+
       // Get next order value
       final characters = await _loadCharacters();
       final nextOrder = characters.isEmpty ? 0 : characters.length;
@@ -153,6 +185,7 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
         pipeSpeed: pipeSpeed,
         jumpForce: jumpForce,
         order: nextOrder,
+        gameOverSoundUrl: gameOverSoundUrl,
       );
 
       await FirebaseFirestore.instance
@@ -167,6 +200,7 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
       _jumpForceCtrl.text = '8.0';
       setState(() {
         _selectedCharacterSprite = null;
+        _selectedGameOverSound = null;
       });
 
       _showSuccess('Character added successfully!');
@@ -459,6 +493,31 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
                             onPressed: _uploading ? null : _pickCharacterSprite,
                             icon: Icon(Icons.image, color: Colors.black),
                             label: Text('Choose Sprite'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent.shade200,
+                              foregroundColor: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedGameOverSound == null
+                                  ? 'No game over sound (using default)'
+                                  : _selectedGameOverSound!.name,
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _uploading ? null : _pickGameOverSound,
+                            icon: Icon(Icons.music_note, color: Colors.black),
+                            label: Text('Choose Sound'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.redAccent.shade200,
                               foregroundColor: Colors.black,

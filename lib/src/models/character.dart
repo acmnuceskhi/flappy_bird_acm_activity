@@ -4,10 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Character {
   final String id;
   final String name;
-  final String spriteUrl;  // Firebase Storage URL
+  final String spriteUrl; // Firebase Storage URL
   final double pipeSpeed;
   final double jumpForce;
-  final int order;  // For displaying in consistent order
+  final int order; // For displaying in consistent order
+  final String gameOverSoundUrl; // Game over sound URL (optional)
 
   const Character({
     required this.id,
@@ -16,6 +17,8 @@ class Character {
     required this.pipeSpeed,
     required this.jumpForce,
     this.order = 0,
+    this.gameOverSoundUrl =
+        'gs://coder-s-cup-minigames.firebasestorage.app/flappy_bird/Fahh - QuickSounds.com.mps',
   });
 
   /// Create from Firestore document
@@ -28,6 +31,9 @@ class Character {
       pipeSpeed: (data['pipeSpeed'] as num?)?.toDouble() ?? 3.0,
       jumpForce: (data['jumpForce'] as num?)?.toDouble() ?? 8.0,
       order: data['order'] as int? ?? 0,
+      gameOverSoundUrl:
+          data['gameOverSoundUrl'] as String? ??
+          'gs://coder-s-cup-minigames.firebasestorage.app/flappy_bird/Fahh - QuickSounds.com.mps',
     );
   }
 
@@ -39,6 +45,7 @@ class Character {
       'pipeSpeed': pipeSpeed,
       'jumpForce': jumpForce,
       'order': order,
+      'gameOverSoundUrl': gameOverSoundUrl,
     };
   }
 
@@ -46,7 +53,7 @@ class Character {
   static const Character defaultBird = Character(
     id: 'default',
     name: 'Classic Bird',
-    spriteUrl: '',  // Will use built-in rendering
+    spriteUrl: '', // Will use built-in rendering
     pipeSpeed: 3.0,
     jumpForce: 8.0,
     order: 0,
@@ -59,6 +66,7 @@ class Character {
     double? pipeSpeed,
     double? jumpForce,
     int? order,
+    String? gameOverSoundUrl,
   }) {
     return Character(
       id: id ?? this.id,
@@ -67,6 +75,7 @@ class Character {
       pipeSpeed: pipeSpeed ?? this.pipeSpeed,
       jumpForce: jumpForce ?? this.jumpForce,
       order: order ?? this.order,
+      gameOverSoundUrl: gameOverSoundUrl ?? this.gameOverSoundUrl,
     );
   }
 }
