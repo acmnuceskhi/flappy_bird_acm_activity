@@ -33,6 +33,9 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
   });
 
   @override
+  Color backgroundColor() => const Color(0x00000000); // Transparent background
+
+  @override
   Future<void> onLoad() async {
     await super.onLoad();
 
@@ -194,6 +197,9 @@ class BirdComponent extends PositionComponent {
   void render(Canvas canvas) {
     super.render(canvas);
 
+    // Draw wing first (behind the bird)
+    _drawWing(canvas);
+
     // If custom sprite is loaded, draw it clipped to a circle
     if (_spriteImage != null) {
       canvas.save();
@@ -238,9 +244,6 @@ class BirdComponent extends PositionComponent {
         size.x / 2,
         borderPaint,
       );
-
-      // Draw wing after the bird body (on the back)
-      _drawWing(canvas);
     }
   }
 

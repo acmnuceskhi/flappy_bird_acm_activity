@@ -144,9 +144,13 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   }
 
   Future<void> _loadBackgroundMusic() async {
-    if (widget.settings.backgroundMusicUrl.isEmpty) return;
+    if (widget.settings.backgroundMusicUrl.isEmpty) {
+      debugPrint('No background music URL provided');
+      return;
+    }
 
     try {
+      debugPrint('Loading background music from: ${widget.settings.backgroundMusicUrl}');
       await _backgroundMusicPlayer.setUrl(widget.settings.backgroundMusicUrl);
       await _backgroundMusicPlayer.setLoopMode(LoopMode.one);
       debugPrint('Background music loaded successfully');
@@ -229,10 +233,14 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
       // Start playing background music when game starts
       if (widget.settings.backgroundMusicUrl.isNotEmpty) {
         try {
+          debugPrint('Attempting to play background music...');
           await _backgroundMusicPlayer.play();
+          debugPrint('Background music playing');
         } catch (e) {
           debugPrint('Error playing background music: $e');
         }
+      } else {
+        debugPrint('No background music URL to play');
       }
     }
   }
@@ -314,6 +322,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
 
         await responseRef.update({
           'score': _bestScore,
+          'score_timestamp': FieldValue.serverTimestamp(),
           'timeTakenSeconds': _stopwatch.elapsed.inSeconds,
           'lastPlayedAt': FieldValue.serverTimestamp(),
         });
