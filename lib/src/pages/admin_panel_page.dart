@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 import '../models/character.dart';
 import '../models/game_settings.dart';
 import '../providers/character_provider.dart';
-import '../widgets/image_editor_dialog.dart';
 
 /// Admin panel for managing characters and background
 class AdminPanelPage extends StatefulWidget {
@@ -84,22 +83,10 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
 
-        if (!mounted) return;
-
-        // Show image editor dialog
-        final editedBytes = await showDialog<Uint8List>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) =>
-              ImageEditorDialog(imageBytes: file.bytes!, fileName: file.name),
-        );
-
-        if (editedBytes != null) {
-          setState(() {
-            _selectedCharacterSprite = file;
-            _editedCharacterSpriteBytes = editedBytes;
-          });
-        }
+        setState(() {
+          _selectedCharacterSprite = file;
+          _editedCharacterSpriteBytes = file.bytes;
+        });
       }
     } catch (e) {
       _showError('Error picking file: $e');
@@ -361,13 +348,13 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
         'flappy_bird/backgrounds/${DateTime.now().millisecondsSinceEpoch}_${_selectedBackground!.name}',
       );
 
-      // Update settings document
+      // Update settings document (or create if it doesn't exist)
       await FirebaseFirestore.instance
           .collection('games')
           .doc(widget.gameId)
           .collection('settings')
           .doc('flappybird')
-          .update({'backgroundUrl': backgroundUrl});
+          .set({'backgroundUrl': backgroundUrl}, SetOptions(merge: true));
 
       setState(() {
         _backgroundUrlCtrl.text = backgroundUrl;
@@ -408,13 +395,13 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
         'flappy_bird/music/${DateTime.now().millisecondsSinceEpoch}_${_selectedBackgroundMusic!.name}',
       );
 
-      // Update settings document
+      // Update settings document (or create if it doesn't exist)
       await FirebaseFirestore.instance
           .collection('games')
           .doc(widget.gameId)
           .collection('settings')
           .doc('flappybird')
-          .update({'backgroundMusicUrl': musicUrl});
+          .set({'backgroundMusicUrl': musicUrl}, SetOptions(merge: true));
 
       setState(() {
         _backgroundMusicUrlCtrl.text = musicUrl;
@@ -455,13 +442,13 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
         'flappy_bird/sounds/${DateTime.now().millisecondsSinceEpoch}_${_selectedPipePassedSound!.name}',
       );
 
-      // Update settings document
+      // Update settings document (or create if it doesn't exist)
       await FirebaseFirestore.instance
           .collection('games')
           .doc(widget.gameId)
           .collection('settings')
           .doc('flappybird')
-          .update({'pipePassedSoundUrl': soundUrl});
+          .set({'pipePassedSoundUrl': soundUrl}, SetOptions(merge: true));
 
       setState(() {
         _pipePassedSoundUrlCtrl.text = soundUrl;
@@ -502,13 +489,13 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
         'flappy_bird/sounds/${DateTime.now().millisecondsSinceEpoch}_${_selectedDefaultGameOverSound!.name}',
       );
 
-      // Update settings document
+      // Update settings document (or create if it doesn't exist)
       await FirebaseFirestore.instance
           .collection('games')
           .doc(widget.gameId)
           .collection('settings')
           .doc('flappybird')
-          .update({'defaultGameOverSoundUrl': soundUrl});
+          .set({'defaultGameOverSoundUrl': soundUrl}, SetOptions(merge: true));
 
       setState(() {
         _defaultGameOverSoundUrlCtrl.text = soundUrl;
@@ -649,23 +636,10 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
                           );
                           if (result != null && result.files.isNotEmpty) {
                             final file = result.files.first;
-
-                            // Show image editor dialog
-                            final editedBytes = await showDialog<Uint8List>(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (ctx) => ImageEditorDialog(
-                                imageBytes: file.bytes!,
-                                fileName: file.name,
-                              ),
-                            );
-
-                            if (editedBytes != null) {
-                              setDialogState(() {
-                                newSprite = file;
-                                editedSpriteBytes = editedBytes;
-                              });
-                            }
+                            setDialogState(() {
+                              newSprite = file;
+                              editedSpriteBytes = file.bytes;
+                            });
                           }
                         },
                   icon: const Icon(Icons.image),

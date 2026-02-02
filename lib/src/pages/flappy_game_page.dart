@@ -180,8 +180,18 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
 
   Future<void> _preLoadGameOverSound() async {
     try {
-      await _audioPlayer.setUrl(widget.selectedCharacter.gameOverSoundUrl);
-      debugPrint('Game over sound pre-loaded successfully');
+      // Use character's sound if available, otherwise use default
+      final soundUrl = widget.selectedCharacter.gameOverSoundUrl.isNotEmpty
+          ? widget.selectedCharacter.gameOverSoundUrl
+          : widget.settings.defaultGameOverSoundUrl;
+
+      if (soundUrl.isEmpty) {
+        debugPrint('No game over sound configured');
+        return;
+      }
+
+      await _audioPlayer.setUrl(soundUrl);
+      debugPrint('Game over sound pre-loaded successfully: $soundUrl');
     } catch (e) {
       debugPrint('Error pre-loading game over sound: $e');
     }

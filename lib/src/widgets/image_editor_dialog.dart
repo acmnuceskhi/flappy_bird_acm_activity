@@ -289,40 +289,15 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
 
       debugPrint('Resized image size: ${resized.width}x${resized.height}');
 
-      // If the image is larger than canvas, we need to crop it
-      // If smaller, we just position it on the canvas
-      if (scaledWidth > targetSize || scaledHeight > targetSize) {
-        // When image is larger, crop the center portion
-        // The offset moves the "viewport" within the scaled image
-        final cropX = ((scaledWidth - targetSize) / 2 - _offset.dx)
-            .toInt()
-            .clamp(0, resized.width - targetSize);
-        final cropY = ((scaledHeight - targetSize) / 2 - _offset.dy)
-            .toInt()
-            .clamp(0, resized.height - targetSize);
-        final cropWidth = targetSize.clamp(0, resized.width - cropX);
-        final cropHeight = targetSize.clamp(0, resized.height - cropY);
+      // Calculate position: center the scaled image, then apply offset
+      final x = ((targetSize - scaledWidth) / 2 + _offset.dx).toInt();
+      final y = ((targetSize - scaledHeight) / 2 + _offset.dy).toInt();
 
-        debugPrint('Cropping: ($cropX, $cropY) ${cropWidth}x$cropHeight');
+      debugPrint('Position: ($x, $y)');
 
-        // Crop the portion we want to show
-        final cropped = img.copyCrop(
-          resized,
-          x: cropX,
-          y: cropY,
-          width: cropWidth,
-          height: cropHeight,
-        );
-
-        // Composite the cropped image to fill the canvas
-        img.compositeImage(canvas, cropped, dstX: 0, dstY: 0);
-      } else {
-        // Image is smaller than canvas, position it with offset
-        final x = ((targetSize - scaledWidth) / 2 + _offset.dx).toInt();
-        final y = ((targetSize - scaledHeight) / 2 + _offset.dy).toInt();
-        debugPrint('Positioning smaller image at: ($x, $y)');
-        img.compositeImage(canvas, resized, dstX: x, dstY: y);
-      }
+      // Composite the image at the calculated position
+      // Parts outside the canvas are automatically clipped
+      img.compositeImage(canvas, resized, dstX: x, dstY: y);
 
       debugPrint('=============================');
 
