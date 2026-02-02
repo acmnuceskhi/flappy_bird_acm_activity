@@ -12,12 +12,14 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
   final GameSettings settings;
   final Function(int score) onGameOver;
   final Function() onScoreUpdate;
+  final Function()? onPipePassed;
   final String? characterSpriteUrl;
-  
+
   late BirdComponent bird;
   final List<PipeComponent> pipes = [];
   bool isGameStarted = false;
   bool isGameOver = false;
+  bool isAssetsLoaded = false; // Track asset loading status
   int score = 0;
   double timeSinceLastPipe = 0;
   final Random random = Random();
@@ -26,29 +28,33 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
     required this.settings,
     required this.onGameOver,
     required this.onScoreUpdate,
+    this.onPipePassed,
     this.characterSpriteUrl,
   });
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    
+
     // Add bird with sprite URL
     bird = BirdComponent(
       position: Vector2(size.x * 0.2, size.y / 2),
       settings: settings,
       spriteUrl: characterSpriteUrl,
     );
-    add(bird);
-    
+    await add(bird);
+
     // Add ground
     add(GroundComponent());
+
+    // Mark assets as loaded after bird sprite loads
+    isAssetsLoaded = true;
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    
+
     if (!isGameStarted || isGameOver) return;
 
     // Spawn pipes
@@ -73,6 +79,7 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
         pipe.passed = true;
         score++;
         onScoreUpdate();
+        onPipePassed?.call();
       }
     }
 
@@ -105,7 +112,7 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
 
   void handleTap() {
     if (isGameOver) return;
-    
+
     if (!isGameStarted) {
       isGameStarted = true;
       bird.isActive = true;
@@ -113,7 +120,7 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
       _spawnPipe();
       timeSinceLastPipe = 0;
     }
-    
+
     bird.jump();
   }
 
@@ -122,13 +129,13 @@ class FlappyBirdGame extends FlameGame with HasCollisionDetection {
     isGameOver = false;
     score = 0;
     timeSinceLastPipe = 0;
-    
+
     // Remove all pipes
     for (final pipe in pipes) {
       pipe.removeFromParent();
     }
     pipes.clear();
-    
+
     // Reset bird
     bird.position = Vector2(size.x * 0.2, size.y / 2);
     bird.velocity = 0;
@@ -141,7 +148,7 @@ class BirdComponent extends PositionComponent {
   final String? spriteUrl;
   double velocity = 0;
   bool isActive = false;
-  ui.Image? _spriteImage;  // Use dart:ui Image type explicitly
+  ui.Image? _spriteImage; // Use dart:ui Image type explicitly
 
   BirdComponent({
     required super.position,
@@ -152,7 +159,7 @@ class BirdComponent extends PositionComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    
+
     // Load custom sprite if URL provided
     if (spriteUrl != null && spriteUrl!.isNotEmpty) {
       try {
@@ -175,10 +182,10 @@ class BirdComponent extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
-    
+
     // Only apply physics when active (game started)
     if (!isActive) return;
-    
+
     velocity += settings.gravity * dt * 50;
     position.y += velocity * dt * 50;
   }
@@ -186,9 +193,19 @@ class BirdComponent extends PositionComponent {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    
-    // If custom sprite is loaded, draw it
+
+    // If custom sprite is loaded, draw it clipped to a circle
     if (_spriteImage != null) {
+      canvas.save();
+
+      // Create circular clip path
+      final center = Offset(size.x / 2, size.y / 2);
+      final radius = size.x / 2;
+      final circlePath = Path()
+        ..addOval(Rect.fromCircle(center: center, radius: radius));
+      canvas.clipPath(circlePath);
+
+      // Draw the image to fill the circle
       final srcRect = Rect.fromLTWH(
         0,
         0,
@@ -197,14 +214,19 @@ class BirdComponent extends PositionComponent {
       );
       final dstRect = Rect.fromLTWH(0, 0, size.x, size.y);
       canvas.drawImageRect(_spriteImage!, srcRect, dstRect, Paint());
+
+      canvas.restore();
+
+      // Draw border around the circle
+      final borderPaint = Paint()
+        ..color = Colors.white.withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+      canvas.drawCircle(center, radius, borderPaint);
     } else {
       // Default bird rendering (yellow circle)
       final paint = Paint()..color = Colors.yellow.shade700;
-      canvas.drawCircle(
-        Offset(size.x / 2, size.y / 2),
-        size.x / 2,
-        paint,
-      );
+      canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
 
       // Bird border
       final borderPaint = Paint()
@@ -216,7 +238,49 @@ class BirdComponent extends PositionComponent {
         size.x / 2,
         borderPaint,
       );
+
+      // Draw wing after the bird body (on the back)
+      _drawWing(canvas);
     }
+  }
+
+  void _drawWing(Canvas canvas) {
+    // Wing rotation based on velocity
+    // Falling (positive velocity) -> wing flaps up (positive rotation)
+    // Going up (negative velocity) -> wing flaps down (negative rotation)
+    final wingRotation = (velocity / settings.jumpForce) * 0.5;
+
+    final wingPaint = Paint()
+      ..color = Colors.orange.shade700
+      ..style = PaintingStyle.fill;
+
+    final wingBorderPaint = Paint()
+      ..color = Colors.orange.shade900
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    // Wing position (center-back of bird)
+    final wingX = size.x * 0.3;
+    final wingY = size.y * 0.5;
+
+    canvas.save();
+    canvas.translate(wingX, wingY);
+    canvas.rotate(wingRotation);
+
+    // Wing shape (ellipse)
+    final wingPath = Path()
+      ..addOval(
+        Rect.fromCenter(
+          center: Offset.fromDirection(pi) * size.x / 2,
+          width: size.x * 0.4,
+          height: size.y * 0.6,
+        ),
+      );
+
+    canvas.drawPath(wingPath, wingPaint);
+    canvas.drawPath(wingPath, wingBorderPaint);
+
+    canvas.restore();
   }
 }
 
@@ -243,7 +307,7 @@ class PipeComponent extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
-    
+
     position.x -= settings.pipeSpeed * dt * 100;
 
     // Check collision with bird
@@ -267,18 +331,20 @@ class PipeComponent extends PositionComponent {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    
+
     final pipePaint = Paint()..color = Colors.green.shade700;
-    
+
     // Top pipe
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, width, gapY),
-      pipePaint,
-    );
+    canvas.drawRect(Rect.fromLTWH(0, 0, width, gapY), pipePaint);
 
     // Bottom pipe
     canvas.drawRect(
-      Rect.fromLTWH(0, gapY + gapHeight, width, screenHeight - (gapY + gapHeight)),
+      Rect.fromLTWH(
+        0,
+        gapY + gapHeight,
+        width,
+        screenHeight - (gapY + gapHeight),
+      ),
       pipePaint,
     );
 
@@ -288,12 +354,14 @@ class PipeComponent extends PositionComponent {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
+    canvas.drawRect(Rect.fromLTWH(0, 0, width, gapY), borderPaint);
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, width, gapY),
-      borderPaint,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, gapY + gapHeight, width, screenHeight - (gapY + gapHeight)),
+      Rect.fromLTWH(
+        0,
+        gapY + gapHeight,
+        width,
+        screenHeight - (gapY + gapHeight),
+      ),
       borderPaint,
     );
   }
@@ -310,11 +378,8 @@ class GroundComponent extends PositionComponent {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    
+
     final paint = Paint()..color = Colors.brown.shade700;
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.x, size.y),
-      paint,
-    );
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), paint);
   }
 }

@@ -10,6 +10,31 @@ class UserHome extends StatelessWidget {
   const UserHome({super.key});
 
   Future<void> _openAdminPanel(BuildContext context) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Card(
+          color: Colors.grey[900],
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Colors.redAccent.shade200),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading admin panel...',
+                  style: TextStyle(color: Colors.grey[300]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     try {
       // Load game settings to pass to admin panel
       final firestore = FirebaseFirestore.instance;
@@ -21,6 +46,7 @@ class UserHome extends StatelessWidget {
 
       if (gamesSnapshot.docs.isEmpty) {
         if (!context.mounted) return;
+        Navigator.of(context).pop(); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Game not found in database')),
         );
@@ -40,6 +66,7 @@ class UserHome extends StatelessWidget {
       final settings = GameSettings.fromFirestore(settingsDoc.data());
 
       if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) =>
@@ -48,6 +75,7 @@ class UserHome extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));

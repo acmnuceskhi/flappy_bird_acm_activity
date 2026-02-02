@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/character.dart';
 import '../models/game_settings.dart';
+import '../providers/character_provider.dart';
 import 'flappy_game_page.dart';
 
 /// Character selection screen shown before each attempt
@@ -28,29 +30,19 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
   String _searchQuery = '';
 
   @override
+  void initState() {
+    super.initState();
+    // Load characters using provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<CharacterProvider>(context, listen: false);
+      provider.loadCharacters(widget.gameId);
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<List<Character>> _loadCharacters() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('games')
-          .doc(widget.gameId)
-          .collection('characters')
-          .orderBy('order')
-          .get();
-
-      if (snapshot.docs.isEmpty) {
-        return [Character.defaultBird];
-      }
-
-      return snapshot.docs.map((doc) => Character.fromFirestore(doc)).toList();
-    } catch (e) {
-      debugPrint('Error loading characters: $e');
-      return [Character.defaultBird];
-    }
   }
 
   void _selectCharacter(BuildContext context, Character character) {
@@ -91,16 +83,15 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
             colors: [Colors.black, Colors.red.shade900],
           ),
         ),
-        child: FutureBuilder<List<Character>>(
-          future: _loadCharacters(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        child: Consumer<CharacterProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading) {
               return const Center(
                 child: CircularProgressIndicator(color: Colors.redAccent),
               );
             }
 
-            if (snapshot.hasError) {
+            if (provider.error != null) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -111,7 +102,7 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
                       size: 48,
                     ),
                     const SizedBox(height: 16),
-                    Text('Error: ${snapshot.error}'),
+                    Text('Error: ${provider.error}'),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => Navigator.of(context).pop(),
@@ -126,7 +117,7 @@ class _CharacterSelectionPageState extends State<CharacterSelectionPage> {
               );
             }
 
-            final characters = snapshot.data ?? [Character.defaultBird];
+            final characters = provider.characters;
             final filteredCharacters = characters
                 .where(
                   (character) => character.name.toLowerCase().contains(
@@ -378,12 +369,22 @@ class _CharacterCard extends StatelessWidget {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              character.spriteUrl,
+                            child: CachedNetworkImage(
+                              imageUrl: character.spriteUrl,
                               width: 90,
                               height: 90,
                               fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
+                              placeholder: (context, url) => Container(
+                                width: 70,
+                                height: 70,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.redAccent.shade200,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) {
                                 return Container(
                                   width: 70,
                                   height: 70,

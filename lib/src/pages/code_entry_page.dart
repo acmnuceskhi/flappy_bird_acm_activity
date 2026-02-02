@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'character_selection_page.dart';
+import 'flappy_game_page.dart';
 import '../models/game_settings.dart';
+import '../models/character.dart';
 
 /// Code entry page - user enters their registration code
 class CodeEntryPage extends StatefulWidget {
@@ -129,19 +131,38 @@ class _CodeEntryPageState extends State<CodeEntryPage> {
         return;
       }
 
-      // Navigate to character selection
+      // For competitive mode, go directly to game with default character
+      // For casual mode (non-competitive), go to character selection
       if (!mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CharacterSelectionPage(
-            gameId: gameId,
-            code: code,
-            settings: settings,
-            userName: responseData['userName'] as String? ?? 'Player',
+
+      if (widget.isCompetitiveMode) {
+        // Competitive mode: use default character
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FlappyGamePage(
+              gameId: gameId,
+              code: code,
+              settings: settings,
+              userName: responseData['userName'] as String? ?? 'Player',
+              selectedCharacter: Character.defaultBird,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        // Casual mode: allow character selection
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CharacterSelectionPage(
+              gameId: gameId,
+              code: code,
+              settings: settings,
+              userName: responseData['userName'] as String? ?? 'Player',
+            ),
+          ),
+        );
+      }
 
       // Clear code after returning from game
       _codeController.clear();

@@ -36,6 +36,7 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   bool _isSubmitting = false;
   bool _isResetting = false; // Debounce flag for play again
   bool _isGameOver = false; // Flag to prevent duplicate game over handling
+  bool _isLoading = true; // Track loading state
   int _score = 0;
 
   // Attempt tracking (local session only)
@@ -44,6 +45,8 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
   final List<int> _attemptScores = [];
   late FocusNode _focusNode;
   late AudioPlayer _audioPlayer;
+  late AudioPlayer _backgroundMusicPlayer;
+  late AudioPlayer _pipePassedSoundPlayer;
 
   @override
   void initState() {
@@ -51,9 +54,17 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
     _stopwatch = Stopwatch();
     _focusNode = FocusNode();
     _audioPlayer = AudioPlayer();
+    _backgroundMusicPlayer = AudioPlayer();
+    _pipePassedSoundPlayer = AudioPlayer();
 
     // Pre-load the game over sound to eliminate delay on first play
     _preLoadGameOverSound();
+
+    // Load and play background music if available
+    _loadBackgroundMusic();
+
+    // Load pipe passed sound if available
+    _loadPipePassedSound();
 
     // Request focus after first frame so keyboard events are received
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,6 +79,8 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
       pipeSpawnInterval: widget.settings.pipeSpawnInterval,
       jumpForce: widget.selectedCharacter.jumpForce, // Use character's jump
       backgroundUrl: widget.settings.backgroundUrl,
+      backgroundMusicUrl: widget.settings.backgroundMusicUrl,
+      pipePassedSoundUrl: widget.settings.pipePassedSoundUrl,
     );
 
     _game = FlappyBirdGame(
@@ -80,14 +93,32 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
           });
         }
       },
+      onPipePassed: _playPipePassedSound,
       characterSpriteUrl: widget.selectedCharacter.spriteUrl,
     );
+
+    // Wait for game to fully load before hiding loading overlay
+    _initializeGame();
+  }
+
+  Future<void> _initializeGame() async {
+    // Wait for game assets to load
+    while (!_game.isAssetsLoaded && mounted) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
     _focusNode.dispose();
     _audioPlayer.dispose();
+    _backgroundMusicPlayer.dispose();
+    _pipePassedSoundPlayer.dispose();
     super.dispose();
   }
 
@@ -95,6 +126,9 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
     // Prevent duplicate game over handling
     if (_isGameOver) return;
     _isGameOver = true;
+
+    // Pause background music before game over sound
+    _backgroundMusicPlayer.pause();
 
     _stopwatch.stop();
     setState(() {
@@ -107,6 +141,41 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
     // Show dialog immediately, submit score in background
     _showGameOverDialog();
     _submitScoreInBackground();
+  }
+
+  Future<void> _loadBackgroundMusic() async {
+    if (widget.settings.backgroundMusicUrl.isEmpty) return;
+
+    try {
+      await _backgroundMusicPlayer.setUrl(widget.settings.backgroundMusicUrl);
+      await _backgroundMusicPlayer.setLoopMode(LoopMode.one);
+      debugPrint('Background music loaded successfully');
+    } catch (e) {
+      debugPrint('Error loading background music: $e');
+    }
+  }
+
+  Future<void> _loadPipePassedSound() async {
+    if (widget.settings.pipePassedSoundUrl.isEmpty) return;
+
+    try {
+      await _pipePassedSoundPlayer.setUrl(widget.settings.pipePassedSoundUrl);
+      debugPrint('Pipe passed sound loaded successfully');
+    } catch (e) {
+      debugPrint('Error loading pipe passed sound: $e');
+    }
+  }
+
+  Future<void> _playPipePassedSound() async {
+    if (widget.settings.pipePassedSoundUrl.isEmpty) return;
+
+    try {
+      await _pipePassedSoundPlayer.stop();
+      await _pipePassedSoundPlayer.seek(Duration.zero);
+      await _pipePassedSoundPlayer.play();
+    } catch (e) {
+      debugPrint('Error playing pipe passed sound: $e');
+    }
   }
 
   Future<void> _preLoadGameOverSound() async {
@@ -136,11 +205,25 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
     });
     _game.reset();
     _stopwatch.reset();
+
+    // Resume background music after reset
+    if (widget.settings.backgroundMusicUrl.isNotEmpty) {
+      _backgroundMusicPlayer.play();
+    }
   }
 
   void _startGame() async {
     if (!_game.isGameStarted) {
       _stopwatch.start();
+
+      // Start playing background music when game starts
+      if (widget.settings.backgroundMusicUrl.isNotEmpty) {
+        try {
+          await _backgroundMusicPlayer.play();
+        } catch (e) {
+          debugPrint('Error playing background music: $e');
+        }
+      }
     }
   }
 
@@ -320,8 +403,8 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                 ),
               ),
 
-              // Start instruction (only show before first tap)
-              if (_currentAttempt == 0 && !_game.isGameStarted)
+              // Start instruction (only show before first tap and after assets loaded)
+              if (_currentAttempt == 0 && !_game.isGameStarted && !_isLoading)
                 Center(
                   child: Text(
                     'Tap to Start',
@@ -432,6 +515,32 @@ class _FlappyGamePageState extends State<FlappyGamePage> {
                   },
                 ),
               ),
+
+              // Loading overlay
+              if (_isLoading)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black87,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Colors.redAccent.shade200,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading game assets...',
+                            style: TextStyle(
+                              color: Colors.grey[300],
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
